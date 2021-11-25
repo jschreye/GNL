@@ -5,85 +5,95 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: jschreye <marvin@42lausanne.ch>            +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2021/10/25 12:48:42 by jschreye          #+#    #+#             */
-/*   Updated: 2021/11/16 16:59:30 by jschreye         ###   ########.fr       */
+/*   Created: 2021/11/18 14:11:11 by jschreye          #+#    #+#             */
+/*   Updated: 2021/11/25 10:36:58 by jschreye         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
+
 #include "get_next_line.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+//# define BUFFER_SIZE 10
+
+char	*readline(char *str);
+void	freeptr(char *ptr);
+int		checkline(char *str);
+char	*trucdemerde(char **save, int stockage, int fd);
 
 char	*get_next_line(int fd)
 {
-	static char	*s_buff = NULL;
-	char		*buffer;
-	char		*line;
+	static char	*save;
+	int			stockage;
 
-	if (fd < 0 || BUFFER_SIZE <= 0)
+	stockage = 0;
+	if (!save)
+		save = ft_strdup("");
+	else
+		save = ft_strdup(&save[checkline(save) + 1]);
+	if (fd < 0 || BUFFER_SIZE <= 0 || save == 0)
 		return (NULL);
-	buffer = (char *) malloc((BUFFER_SIZE + 1) * sizeof(char));
-	if (!buffer)
-		return (NULL);
-	if (read(fd, buffer, 0) < 0)
-	{
-		free(buffer);
-		return (NULL);
-	}
-	if (!s_buff)
-		s_buff = ft_strdup("");
-	if (read_file(fd, &buffer, &s_buff, &line) == 0 && *line == '\0')
-	{
-		free_ptr(line);
-		return (NULL);
-	}
-	return (line);
+	return (trucdemerde(&save, stockage, fd));
 }
 
-void	free_ptr(char *ptr)
+void	freeptr(char *ptr)
 {
 	if (ptr)
 	{
 		free(ptr);
 		ptr = NULL;
 	}
-}
-
-int	read_file(int fd, char **buffer, char **s_buff, char **line)
+}	
+int	checkline(char *str)
 {
-	int		bytes_read;
-	char	*temp;
+	int	c;
 
-	bytes_read = 1;
-	while (!ft_strchr(*s_buff, '\n') && bytes_read)
-	{
-		bytes_read = read(fd, *buffer, BUFFER_SIZE);
-		(*buffer)[bytes_read] = '\0';
-		temp = *s_buff;
-		*s_buff = ft_strjoin(*s_buff, *buffer);
-		free_ptr(temp);
-	}
-	free_ptr(*buffer);
-	get_line(line, s_buff);
-	return (bytes_read);
+	c = 0;
+	while (str[c] != '\0' && str[c] != '\n')
+		c++;
+	return (c);
 }
 
-char	*get_line(char **line, char **s_buff)
+char	*trucdemerde(char **save, int stockage, int fd)
 {
-	char	*buff_temp;
-	int		buff_nl;
+	char	*tmp;
+	char	*result;
+	char	*ptr;
 
-	buff_nl = 0;
-	buff_temp = *s_buff;
-	while ((*s_buff)[buff_nl] != '\n' && (*s_buff)[buff_nl] != '\0')
-		buff_nl++;
-	if (ft_strchr(*s_buff, '\n'))
+	stockage = 1;
+	tmp = malloc(sizeof(char) * BUFFER_SIZE + 1);
+	if (!tmp)
+		return (NULL);
+	while (!ft_strchr(tmp, '\n') && stockage != 0)
 	{
-		*line = ft_substr(*s_buff, 0, buff_nl + 1);
-		*s_buff = ft_strdup(*s_buff + buff_nl + 1);
+		stockage = read(fd, tmp, BUFFER_SIZE);
+		if (stockage == -1)
+			return (NULL);
+		tmp[stockage] = '\0';
+		ptr = *save;
+		*save = ft_strjoin(*save, tmp);
+		freeptr(ptr);
+		if (tmp[stockage] == '\n')
+			break;
 	}
-	else
-	{
-		*line = ft_strdup(buff_temp);
-		*s_buff = NULL;
-	}
-	free_ptr(buff_temp);
-	return (*line);
+	result = ft_substr(*save, 0, checkline(*save) + 1);
+	return (result);
 }
+/*int main()
+{
+	int	fd;
+
+	fd = open("text", O_RDONLY);
+	if (fd == - 1)
+		return (1);
+	printf("%s", get_next_line(fd));
+	printf("%s", get_next_line(fd));
+	printf("%s", get_next_line(fd));
+	printf("%s", get_next_line(fd));
+	close(fd);
+	return (0);	
+}*/
